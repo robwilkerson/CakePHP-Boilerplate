@@ -1,0 +1,524 @@
+<!--
+	$Id$
+
+	Sample build script.  This script will not necessarily deploy
+	any specific project successfully, but is intended to serve as
+	a representation of the baseline targets and tasks that will
+	be executed for most projects.
+
+	Although this script may not work as is, it should be able to
+	act as a baseline for most projects and should be fully functional
+	with a little modification.
+
+	@author	Rob Wilkerson
+	@date	8/23/2007
+ -->
+
+<project name="build-project" default="all" basedir=".">
+	<description>
+		Builds and deploys a sample project.
+	</description>
+
+	<!-- get build properties from file -->
+	<property file="build.properties" />
+
+	<!--
+		add external library file paths to
+		the project classpath
+	 -->
+	<path id="project.classpath">
+		<pathelement location="${tasklib.svnant.tasks}" />
+		<pathelement location="${tasklib.svnant.adapter}" />
+		<pathelement location="${tasklib.svnant.javahl}" />
+		<pathelement location="${tasklib.antelope.tasks}" />
+	</path>
+
+	<!-- make the svn tasks available -->
+	<taskdef resource="svntask.properties"
+			 classpathref="project.classpath"
+	/>
+
+	<!-- make the antelope tasks available -->
+	<taskdef resource="ise/antelope/tasks/antlib.xml"
+			 classpathref="project.classpath"
+	/>
+
+	<target name="all" depends="init,export,showmaintenance,backup,delete,deploy,finalize,clean" />
+
+	<!-- the default target calls other targets in the proper sequence -->
+	<target name="init">
+		<description>Initialize the build.</description>
+
+		<!--
+			Set a property for the deployment environment based on the hostname
+		 -->
+		<grep in="${remote.hostname}"
+			  regex="([^.]+)\.npd\.root$"
+			  group="1"
+			  property="build.raw.targetenv"
+			  caseinsensitive="true"
+		/>
+		<stringutil string="${build.raw.targetenv}" property="build.targetenv">
+			<uppercase />
+		</stringutil>
+
+		<!--
+			Ensure that the version number is properly formatted
+		 -->
+		<grep in="${project.version}" regex="^[0-9]+(\.[0-9]+){2}$" property="valid.version" />
+		<fail unless="valid.version" message="The specified project version (${project.version}) is invalid.  Project versions must specify a major, minor and maintenance version (e.g. 1.0.1)." />
+		<!--
+			Ensure that the revision being retrieved is an integer value (i.e. not "HEAD")
+		 -->
+		<grep in="${build.revision}" regex="^[0-9]+$" property="valid.revision" />
+		<fail unless="valid.revision" message="'${build.revision}' is not a valid revision number.  Please use the actual revision number to ensure proper versioning and tagging." />
+		<!--
+			If deploying to production or staging, ensure that the specialized deploy user is
+			being engaged. Otherwise an error will occur that isn't easy to track down.
+		 -->
+		<if>
+			<bool>
+				<and>
+					<!--
+						The environment is not dev (a.k.a _is_ staging or production)
+					 -->
+					<not>
+						<or>
+							<equals arg1="${build.targetenv}" arg2="DEV" />
+							<equals arg1="${build.targetenv}" arg2="DEVEL" />
+							<equals arg1="${build.targetenv}" arg2="DEVELOPMENT" />
+						</or>
+					</not>
+					<!--
+						AND the remote user is not "deploy"
+					 -->
+					<not>
+						<equals arg1="${remote.user}" arg2="deploy" />
+					</not>
+				</and>
+			</bool>
+
+			<fail message="Only the deploy user can execute staging or production builds." />
+		</if>
+
+		<echo> </echo>
+		<echo>IMPORTANT BUILD DETAILS:</echo>
+		<echo>	- You are executing a build of the project named "${project.name}"</echo>
+		<echo>	- The project version will be documented as ${project.version}.${build.revision}</echo>
+		<echo>	- This project will be deployed to ${remote.hostname}:${remote.projectroot}</echo>
+
+		<!--
+			Set the build type for install or upgrade.  This may be used by some
+			tasks (e.g. the task that executes SQL scripts). An "upgrade" build
+			assumes an upgrade from the PREVIOUS VERSION, not from a previous
+			build of the same version
+		 -->
+		<if name="build.upgrade" value="false">
+			<property name="build.executionpath" value="install" />
+
+			<else>
+				<property name="build.executionpath" value="upgrade" />
+			</else>
+		</if>
+		<stringutil string="${build.executionpath}" property="build.test.executionpath">
+			<uppercase />
+		</stringutil>
+		<echo>	- This is an ${build.test.executionpath} build.</echo>
+
+		<!--
+			Creates a file system-safe name from the project.name property in the build.properties
+			file by lowercasing the name and replacing any spaces with a single hyphen.
+		 -->
+		<stringutil string="${project.name}" property="project.fsname">
+			<lowercase />
+			<replace regex="\s+"
+			         replacement="-"
+			/>
+		</stringutil>
+		<echo>	- The file system project name used for tags, etc. will be "${project.fsname}".</echo>
+
+		<echo> </echo>
+		<echo>Please verify the output above. The build will continue in ~1 minute.</echo>
+		<sleep minutes="1"/>
+		<echo>Continuing...</echo>
+
+		<echo> </echo>
+		<echo>Delete local build files (if any remain from a failed build).</echo>
+		<delete dir="${local.buildroot}/${project.fsname}"
+				failonerror="false"
+		/>
+		<echo>	> Complete</echo>
+	</target>
+
+	<target name="export">
+		<description>Export the project code base from source control.</description>
+
+		<echo>Export project files from the source control repository at revision ${build.revision}.</echo>
+		<svn javahl="false" username="${svn.user}" password="${svn.password}">
+			<export srcUrl="${svn.repos.project.exporturi}"
+					destPath="${local.buildroot}/${project.fsname}"
+					revision="${build.revision}"
+			/>
+		</svn>
+		<echo>	> Complete</echo>
+
+		<echo> </echo>
+		<echo>Rename and perform variable substitution on the sample config file.</echo>
+		<move 	file="${local.buildroot}/${project.fsname}/html/config.php.sample"
+				toFile="${local.buildroot}/${project.fsname}/html/config.php"
+		>
+			<filterset>
+				<filter token="APP_VERSION" value="${project.version}.${build.revision}" />
+			</filterset>
+		</move>
+		<echo>	> Complete</echo>
+	</target>
+
+	<target name="showmaintenance">
+		<description>Perform the necessary actions to display a maintenance screen.</description>
+
+		<echo>Ensure that the maint/ directory exists.</echo>
+		<echo>Executing "mkdir -p ${remote.projectroot}/maint"</echo>
+		<sshexec host="${remote.hostname}"
+			     trust="true"
+			     username="${remote.user}"
+			     password="${remote.password}"
+		         command="mkdir -p ${remote.projectroot}/maint"
+		/>
+		<echo>	> Complete</echo>
+
+		<echo> </echo>
+		<echo>Delete any existing maintenance resources from ${remote.hostname}, but retain the maint/ directory itself.</echo>
+		<echo>Executing "rm -rf ${remote.projectroot}/maint/*"</echo>
+		<sshexec host="${remote.hostname}"
+			     trust="true"
+			     username="${remote.user}"
+			     password="${remote.password}"
+		         command="rm -rf ${remote.projectroot}/maint/*"
+		/>
+		<echo>	> Complete</echo>
+
+		<echo> </echo>
+		<echo>Upload new maintenance resources to ${remote.hostname}/maint.</echo>
+		<scp todir="${remote.user}:${remote.password}@${remote.hostname}:${remote.projectroot}/maint"
+			 trust="true"
+			 verbose="false"
+		>
+			<fileset dir="${local.buildroot}/${project.fsname}/maint" />
+		</scp>
+		<echo>	> Complete</echo>
+
+		<echo> </echo>
+		<echo>Ensure that the maintenance resources are adequately accessible while the build progresses.</echo>
+		<echo>Permissions will be applied more selectively after the entire code base is deployed.</echo>
+		<echo>Executing "sudo chmod -R 755 ${remote.projectroot}/maint"</echo>
+		<sshexec host="${remote.hostname}"
+			     trust="true"
+			     username="${remote.user}"
+			     password="${remote.password}"
+		         command="sudo chmod -R 755 ${remote.projectroot}/maint"
+		/>
+		<echo>	> Complete</echo>
+
+		<echo> </echo>
+		<echo>Please verify that the maintenance screen is being displayed at ${project.baseuri}.</echo>
+		<echo>The build will continue in ~1 minute.</echo>
+
+		<sleep minutes="1" />
+		<echo>Continuing...</echo>
+	</target>
+
+	<target name="backup">
+		<description>Creates backup of the project as it exists on the remote server (${remote.hostname})</description>
+
+		<echo>Ensure that the specified archive target directory (${remote.archiveto}) exists.</echo>
+		<echo>Executing "mkdir -p ${remote.archiveto}"</echo>
+		<sshexec host="${remote.hostname}"
+			     trust="true"
+			     username="${remote.user}"
+			     password="${remote.password}"
+		         command="mkdir -p ${remote.archiveto}"
+		/>
+		<echo>	> Complete</echo>
+
+		<echo> </echo>
+		<echo>Dump the project database into the project root directory so that it will be included in the tarball.</echo>
+		<echo>Executing "mysqldump -h${mysql.host} -u${mysql.user} -p${mysql.password} --opt --add-drop-database --complete-insert --databases ${mysql.dbname} &gt; ${remote.projectroot}/${mysql.dbname}.dump"</echo>
+		<try>
+			<sshexec host="${remote.hostname}"
+				     trust="true"
+				     username="${remote.user}"
+				     password="${remote.password}"
+			         command="/usr/bin/mysqldump -h${mysql.host} -u${mysql.user} -p${mysql.password} --opt --add-drop-database --complete-insert --databases ${mysql.dbname} > ${remote.projectroot}/${mysql.dbname}.dump"
+					 outputproperty="mysqldump"
+			/>
+
+			<catch>
+				<stringutil string="${mysqldump}" property="nodatabase">
+					<indexof string="1049: Unknown database" />
+				</stringutil>
+
+				<!--
+					Rethrow an exception if the exception is NOT an "unknown database" error.
+					This error is expected the first time a build for a new project is executed.
+				 -->
+				<if name="nodatabase" value="-1">
+					<throw message="${mysqldump}" />
+				</if>
+
+				<echo>An "Unknown database" error was ignored.</echo>
+				<echo>	> If this is not the first build of this project or if the error is unexpected for any other</echo>
+				<echo>	  reason then terminate this script and investigate.</echo>
+				<echo>The build will continue in ~30 seconds.</echo>
+
+				<sleep seconds="30" />
+				<echo>Continuing...</echo>
+			</catch>
+		</try>
+		<echo>	> Complete</echo>
+
+		<echo> </echo>
+		<echo>Create a tarball of the existing code base.</echo>
+		<echo>Executing "tar -zcvf ${remote.archiveto}/${project.fsname}.`date '+%Y%m%d%H%M%S'`.tar.gz ${remote.projectroot} --exclude logs"</echo>
+		<sshexec host="${remote.hostname}"
+			     trust="true"
+			     username="${remote.user}"
+			     password="${remote.password}"
+		         command="tar -zcvf ${remote.archiveto}/${project.fsname}.`date '+%Y%m%d%H%M%S'`.tar.gz ${remote.projectroot} --exclude logs"
+				 verbose="false"
+		/>
+		<echo>	> Complete</echo>
+
+		<echo> </echo>
+		<echo>Delete the mysqldump file now that it's rolled up in the tarball.</echo>
+		<echo>Executing "rm ${remote.projectroot}/${mysql.dbname}.dump;"</echo>
+		<sshexec host="${remote.hostname}"
+			     trust="true"
+			     username="${remote.user}"
+			     password="${remote.password}"
+		         command="rm ${remote.projectroot}/${mysql.dbname}.dump;"
+		/>
+		<echo>	> Complete</echo>
+	</target>
+
+	<target name="delete">
+		<description>
+			Delete the existing code base in preparation for the new version.
+		</description>
+
+		<!--
+			In our environments, the /bin directory resides on a NAS mount so we can't delete
+			it en masse. Instead, we have to recurse through it and delete each file.
+		 -->
+		<echo>Delete the existing classes directory and htaccess file.</echo>
+		<echo>Executing "rm -rf ${remote.projectroot}/classes/* ${remote.projectroot}/html/.htaccess"</echo>
+		<sshexec host="${remote.hostname}"
+			     trust="true"
+			     username="${remote.user}"
+			     password="${remote.password}"
+			     command="rm -rf ${remote.projectroot}/classes/* ${remote.projectroot}/html/.htaccess"
+		/>
+
+		<echo>Delete the entire web root save for the /bin directory which contains user contributed content.</echo>
+		<echo>Executing "find ${remote.projectroot}/html/* ! -regex '${remote.projectroot}/html/bin\($\|/.*\)' -exec rm -rf {} \; ;"</echo>
+		<sshexec host="${remote.hostname}"
+			     trust="true"
+			     username="${remote.user}"
+			     password="${remote.password}"
+			     command="find ${remote.projectroot}/html/* ! -regex '${remote.projectroot}/html/bin\($\|/.*\)' -exec rm -rf {} \; ;"
+		/>
+
+		<echo>Debug pause to ensure that everything is properly cleared</echo>
+		<sleep minutes="1" />
+	</target>
+
+	<target name="deploy">
+		<description>Copies the remaining code base (maint/ has already been copied from the build root to the remote machine.</description>
+
+		<!--
+			Copy html/, classes/ and _meta/ while excluding maint/
+		 -->
+		<echo>Copy project files to ${remote.hostname}:${remote.projectroot}. Exclude the maint/ directory.</echo>
+		<scp todir="${remote.user}:${remote.password}@${remote.hostname}:${remote.projectroot}"
+			 trust="true"
+			 verbose="false"
+		>
+			<fileset dir="${local.buildroot}/${project.fsname}" excludes="maint/" />
+		</scp>
+		<echo>	> Complete</echo>
+
+		<echo> </echo>
+		<echo>Give the Apache user (${remote.apacheuser}) access to all files.</echo>
+		<echo>	> Set ownership of directories _other_ than &lt;project root&gt;/html.</echo>
+		<echo>	> Executing "sudo chown -R ${remote.apacheuser}.${remote.develgroup} ${remote.projectroot}/_meta ${remote.projectroot}/classes ${remote.projectroot}/maint"</echo>
+		<sshexec host="${remote.hostname}"
+			     trust="true"
+			     username="${remote.user}"
+			     password="${remote.password}"
+		         command="sudo chown -R ${remote.apacheuser}.${remote.develgroup} ${remote.projectroot}/_meta ${remote.projectroot}/classes ${remote.projectroot}/maint"
+		/>
+		<echo>	> Selectively set ownership of &lt;project root&gt;/html.</echo>
+		<echo>	> The &lt;project root&gt;/html/bin directory is a NAS mount and its ownership cannot be changed.</echo>
+		<echo>	> Executing "find ${remote.projectroot}/html/* ! -regex '${remote.projectroot}/html/bin\($\|/.*\)' -exec sudo chown -R root.devel {} \; ;"</echo>
+		<sshexec host="${remote.hostname}"
+			     trust="true"
+			     username="${remote.user}"
+			     password="${remote.password}"
+		         command="find ${remote.projectroot}/html/* ! -regex '${remote.projectroot}/html/bin\($\|/.*\)' -exec sudo chown -R root.devel {} \; ;"
+		/>
+		<echo>Set permissions for all application directories _other_ than &lt;project root&gt;/html.</echo>
+		<echo>	> Executing "sudo chmod -R 775 ${remote.projectroot}/_meta ${remote.projectroot}/classes ${remote.projectroot}/html ${remote.projectroot}/maint ${remote.projectroot}/html/.htaccess"</echo>
+		<sshexec host="${remote.hostname}"
+			     trust="true"
+			     username="${remote.user}"
+			     password="${remote.password}"
+		         command="sudo chmod -R 775 ${remote.projectroot}/_meta ${remote.projectroot}/classes ${remote.projectroot}/maint ${remote.projectroot}/html/.htaccess"
+		/>
+		<echo>	> Selectively set perms on &lt;project root&gt;/html.</echo>
+		<echo>	> The &lt;project root&gt;/html/bin directory is a NAS mount and its perms should not be changed without a good reason.</echo>
+		<echo>	> Executing "find ${remote.projectroot}/html/* ! -regex '${remote.projectroot}/html/bin\($\|/.*\)' -exec sudo chmod -R 775 {} \; ;"</echo>
+		<sshexec host="${remote.hostname}"
+			     trust="true"
+			     username="${remote.user}"
+			     password="${remote.password}"
+		         command="find ${remote.projectroot}/html/* ! -regex '${remote.projectroot}/html/bin\($\|/.*\)' -exec sudo chmod -R 775 {} \; ;"
+		/>
+		<echo>	> Complete</echo>
+
+		<echo> </echo>
+		<echo>Install or update the project database on ${mysql.host}.</echo>
+		<echo>Executing "mysql -h${mysql.host} -u${mysql.user} -p${mysql.password} &lt; ${remote.projectroot}/_meta/db/${build.executionpath}.sql"</echo>
+		<sshexec host="${remote.hostname}"
+			     trust="true"
+			     username="${remote.user}"
+			     password="${remote.password}"
+		         command="mysql -h${mysql.host} -u${mysql.user} -p${mysql.password} &lt; ${remote.projectroot}/_meta/db/${build.executionpath}.sql"
+		/>
+		<echo>	> Complete</echo>
+	</target>
+
+	<target name="finalize">
+		<description>Performs the final build actions</description>
+		<!--
+			tags, etc.
+		 -->
+		<if>
+			<bool>
+				<or>
+					<equals arg1="${build.targetenv}" arg2="DEV"/>
+					<equals arg1="${build.targetenv}" arg2="DEVEL"/>
+					<equals arg1="${build.targetenv}" arg2="DEVELOPMENT"/>
+				</or>
+			</bool>
+
+			<echo>Executing a test build against a development environment.  No tagging or branching will be done.</echo>
+
+			<else>
+				<echo>Tagging build ${build.revision} of ${project.name} v${project.version}</echo>
+				<stringutil string="${project.fsname}-${project.version}.${build.revision}" property="build.tagname">
+					<lowercase />
+					<replace regex="\s+"
+					         replacement="-"
+					/>
+				</stringutil>
+				<echo>This build will be tagged with the name "${build.tagname}".</echo>
+
+				<!--
+					Create a build tag only when deploying to staging.  Why? If things are done right, then the
+					revision deployed to production will be the same revision as that deployed to staging. If
+					both builds are tagged in the same location then a tag by the same name will already exist
+					when the production build is done. That means that Svn will drop the entire production
+					tag _inside of_ the existing tag. Ugh.
+				 -->
+				<if>
+					<bool>
+						<or>
+							<equals arg1="${build.targetenv}" arg2="STG"/>
+							<equals arg1="${build.targetenv}" arg2="STAGE"/>
+							<equals arg1="${build.targetenv}" arg2="STAGING"/>
+						</or>
+					</bool>
+
+					<echo>Tagging a build of version ${project.version}.${build.revision} of the ${project.name} project.</echo>
+					<echo>Copying ${svn.repos.project.exporturi} to ${svn.repos.project.baseuri}/tags/build/${build.tagname}</echo>
+					<svn javahl="false" username="${svn.user}" password="${svn.password}">
+						<copy srcUrl="${svn.repos.project.exporturi}"
+							  destUrl="${svn.repos.project.baseuri}/tags/build/${build.tagname}"
+							  revision="${build.revision}"
+							  message="Tagging a build of v${project.version} of the ${project.name} project at r${build.revision}.  Tag created from ${svn.repos.project.exporturi} by ${svn.user}."
+						/>
+					</svn>
+					<echo>	> Complete</echo>
+				</if>
+
+				<if>
+					<bool>
+						<or>
+							<equals arg1="${build.targetenv}" arg2="PRD"/>
+							<equals arg1="${build.targetenv}" arg2="PROD"/>
+							<equals arg1="${build.targetenv}" arg2="PRODUCTION"/>
+						</or>
+					</bool>
+
+					<echo>Tagging the final build of version ${project.version} of the ${project.name} project at r${build.revision}.</echo>
+					<echo>Copying ${svn.repos.project.exporturi} to ${svn.repos.project.baseuri}/tags/release/${build.tagname}</echo>
+					<svn javahl="false" username="${svn.user}" password="${svn.password}">
+						<copy srcUrl="${svn.repos.project.exporturi}"
+							  destUrl="${svn.repos.project.baseuri}/tags/release/${build.tagname}"
+							  revision="${build.revision}"
+							  message="Tagging the final build of v${project.version} of the ${project.name} project at r${build.revision}.  Tag created from ${svn.repos.project.exporturi} by ${svn.user}."
+						/>
+					</svn>
+					<echo>	> Complete</echo>
+
+					<echo> </echo>
+					<echo>Unlock the debug user for error tracking.</echo>
+					<echo>Executing "/usr/local/scripts/debug_unlock.sh"</echo>
+					<sshexec host="${remote.hostname}"
+						     trust="true"
+						     username="${remote.user}"
+						     password="${remote.password}"
+					         command="/usr/local/scripts/debug_unlock.sh"
+					/>
+					<echo>	> Complete</echo>
+				</if>
+			</else>
+		</if>
+	</target>
+
+	<target name="clean">
+		<description>Cleans up build resources on the remote and local machines</description>
+		<!--
+			delete unused directories
+			rename maintenance page
+		 -->
+		<echo>Delete the html/_meta directory.</echo>
+		<echo>Executing "rm -rf ${remote.projectroot}/_meta"</echo>
+		<sshexec host="${remote.hostname}"
+			     trust="true"
+			     username="${remote.user}"
+			     password="${remote.password}"
+		         command="rm -rf ${remote.projectroot}/_meta"
+		/>
+		<echo>	> Complete</echo>
+
+		<echo> </echo>
+		<echo>Rename the maintenance page to make the application available.</echo>
+		<echo>Executing "mv ${remote.projectroot}/maint/maintenance.htm ${remote.projectroot}/maint/maintenance.inactive.htm"</echo>
+		<sshexec host="${remote.hostname}"
+			     trust="true"
+			     username="${remote.user}"
+			     password="${remote.password}"
+		         command="mv ${remote.projectroot}/maint/maintenance.htm ${remote.projectroot}/maint/maintenance.inactive.htm"
+		/>
+		<echo>	> Complete</echo>
+
+		<echo> </echo>
+		<echo>Delete local build files</echo>
+		<delete dir="${local.buildroot}/${project.fsname}"
+				failonerror="false"
+		/>
+		<echo>	> Complete</echo>
+	</target>
+</project>
+

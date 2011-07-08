@@ -1,0 +1,115 @@
+#
+# $Id$
+#
+# Sample build script properties file.  The property values are reasonable examples of
+# values, but are variable.  Most will change from build to build and others will change
+# depending on who is running the build.
+#
+# NOTE: WHEN SPECIFYING WINDOWS PATHS, DO NOT USE "\".  USE "/" INSTEAD.  THE BUILD WILL
+#       NOT SUCCEED IF BACKSLASHES ARE USED.
+#
+# NOTE: Many property values are set assuming that the build is being run on the deployment
+#       machine. If that is not the case, update those values appropriately.
+#
+# NOTE: In this .sample file, double underscores (__) surround variable values that are likely
+#       to change depending on the build machine, the targeted deployment environment or the
+#       user executing the build.  These values should be modified as required, but never
+#       committed back to the repository.
+#
+# @author	Rob Wilkerson
+# @date		8/23/2007
+#
+
+#
+# External task libraries
+#
+tasklib.dir=/usr/share/ant/lib
+
+tasklib.svnant.tasks=${tasklib.dir}/svnant.jar
+tasklib.svnant.adapter=${tasklib.dir}/svnClientAdapter.jar
+tasklib.svnant.javahl=${tasklib.dir}/svnjavahl.jar
+
+tasklib.antelope.tasks=${tasklib.dir}/AntelopeTasks.jar
+
+#
+# Project details
+#
+# project.name		The project name is in "plain English" including spaces and capitalization.
+# 					For any given project, this value is "constant" and should be set and committed
+# 					in the build.properties.sample file.
+# project.version	Include major, minor and maintenance versions
+# project.baseuri	The fully qualified URI of the web root.
+#
+project.name=__Creative Survey__
+project.version=__1.0.0__
+project.baseuri=http://rwilkerson.ds.dev.npd.root
+
+#
+# Build details
+#
+# build.revision	The revision from which the build is created.  ALWAYS USE THE REVISION NUMBER
+# 					ITSELF.  The revision number will be appended to the project version above, so
+# 					do not specify 'HEAD' in this property value.
+# build.upgrade		Whether this build is an upgrade of an existing version or a fresh install of
+# 					the current version.  For the sake of safety, this is defaulted to true.
+#
+build.revision=__95__
+build.upgrade=__true__
+
+#
+# Build machine details
+#
+# When exporting code, the executing script will create a subdirectory of this root that will be the project
+# build directory.  The build directory will be deleted before code is exported from Subversion.
+#
+local.buildroot=/home/__username__/_build
+
+#
+# Source control details
+#
+# The repository base URI (svn.repos.baseuri) should point to the repository root. Do not
+# include trailing slashes in paths or URIs for readability when concatenating.
+#
+svn.user=__svnusername__
+svn.password=__svnpassword__
+svn.repos.rooturi=https://svn.adcomlabs.com
+svn.repos.project.baseuri=${svn.repos.rooturi}/__creativesurvey__
+svn.repos.project.exporturi=${svn.repos.project.baseuri}/__trunk__
+
+#
+# Remote, or deployment, server details
+#
+remote.hostname=__stg.npd.root__
+remote.user=__serverusername__
+remote.password=__serverpassword__
+remote.apacheuser=apache
+remote.develgroup=devel
+remote.projectroot=/var/www/domains/__mydomain.adcomlabs.com__
+remote.archiveto=/var/www/domains/archive
+
+#
+# MySQL details that will allow the deployment server's MySQL client to execute DDL files
+# against a remote server.
+#
+mysql.host=__db01.stg.npd.root__
+mysql.dbname=__database_name__
+mysql.user=__mysqlusername__
+mysql.password=__mysqlpassword__
+
+#
+# Variable substitution details
+#
+# Before deploying code, it will likely be necessary to replace variables in the config file and maybe
+# other, similar files.  The replacement values should be defined here.  Example values are shown below,
+# but commented.  Add any required values beneath these comments.
+#
+# Example values:
+# 	config.db.host=hostname
+# 	config.db.name=dbname
+# 	config.db.user=username
+# 	config.db.passwd=password
+#	config.ftp.host=hostname
+#
+# DO NOT INCLUDE VALUES THAT DO NOT CHANGE FROM BUILD TO BUILD OR ENVIRONMENT TO ENVIRONMENT. IMMUTABLE
+# VALUES SHOULD JUST BE INCLUDED DIRECTLY IN THE CONFIG FILE ITSELF.
+#
