@@ -1,0 +1,9 @@
+[submodule "app/plugins/audit_log"]
+	path = app/plugins/audit_log
+	url = git@github.com:robwilkerson/CakePHP-Audit-Log-Plugin.git
+[submodule "app/plugins/format_mask"]
+	path = app/plugins/format_mask
+	url = git@github.com:robwilkerson/CakePHP-Format-Mask-Plugin.git
+[submodule "app/plugins/polyclip"]
+	path = app/plugins/polyclip
+	url = git@github.com:robwilkerson/CakePHP-Polyclip-Plugin.git
