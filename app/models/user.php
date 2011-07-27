@@ -76,6 +76,8 @@ class User extends AppModel {
    * @access	public
    */
   public function beforeValidate() {
+    parent::beforeValidate();
+    
     if( !empty( $this->data ) ) {
       /**
        * An empty password value is never empty. The Auth module hashes
@@ -107,6 +109,20 @@ class User extends AppModel {
   /**
    * PUBLIC METHODS
    */
+   
+  /**
+   * Constructor.
+   *
+   * Define virtual fields here so we can respect any aliases.
+   * 
+   * @see http://book.cakephp.org/view/1632/Virtual-fields-and-model-aliases
+   */
+  public function __construct( $id = false, $table = null, $ds = null ) {
+    parent::__construct( $id, $table, $ds );
+    
+    $this->virtualFields['full_name'] = sprintf( 'CONCAT(%s.first_name, " ", %s.last_name)', $this->alias, $this->alias );
+    $this->whitelist = array_diff( array_keys( $this->schema() ), array( 'id', 'last_login', 'active', 'created', 'modified' ) );
+  }
   
   /**
    * Retrieves the authenticated user data or, optionally, a specific
