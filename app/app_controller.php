@@ -2,7 +2,18 @@
 
 class AppController extends Controller {
   public $helpers    = array( 'Html', 'Number', 'Session', 'Text', 'Time' );
-  public $components = array( 'Auth', 'RequestHandler', 'Session' );
+  public $components = array(
+    'Auth' => array(
+      'authorize'    => 'controller',
+      'fields'       => array( 'username' => 'email', 'password' => 'password' ), 
+      'userScope'    => array( 'active' => 1 ),
+      # 'loginRedirect' => array(), # Sends to the homepage (/) by default
+      'autoRedirect' => false,
+      # 'logoutRedirect' => array(), # Redirects to the login page by default
+    ),
+    'RequestHandler',
+    'Session'
+  );
   
   /**
    * OVERRIDES
@@ -20,6 +31,41 @@ class AppController extends Controller {
     }
     
     parent::constructClasses();
+  }
+  
+  /**
+   * CALLBACKS
+   */
+  
+  /**
+   * CakePHP's beforeFilter callback.
+   *
+   * @return	void
+   * @access	public
+   */
+  public function beforeFilter() {
+    $this->Auth->loginError = __( 'Invalid authentication credentials. Please try again.', true );
+    $this->Auth->authError  = __( 'Authentication required. Please login.', true );
+    
+    $user = $this->Auth->user();
+    if( !empty( $user ) ) {
+      Configure::write( 'User', $user[$this->Auth->getModel()->alias] );
+    }
+  }
+  
+  /**
+   * PUBLIC METHODS
+   */
+  
+  /**
+   * Has the final call over whether a user gets authenticated. Called
+   * by the Auth component.
+   *
+   * @return	boolean
+   * @access	public
+   */
+  public function isAuthorized() {
+    return true;
   }
   
   /**

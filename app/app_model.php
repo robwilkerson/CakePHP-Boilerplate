@@ -77,6 +77,23 @@ class AppModel extends Model {
   }
   
   /**
+   * Custom validation method to ensure that two field values are the
+   * same before validating the model. Useful (and ubiquitous) for
+   * authentication credentials.
+   *
+   * @param   $field
+   * @param   $confirm_field
+   * @access  public
+   * @see     http://bakery.cakephp.org/articles/aranworld/2008/01/14/using-equalto-validation-to-compare-two-form-fields
+   */
+  public function identical( $check = array(), $confirm_field = null ) {
+    $value   = array_shift( array_values( $check ) );
+    $compare = $this->data[$this->alias][$confirm_field];
+    
+    return $value === $compare;
+  }
+  
+  /**
    * PUBLIC METHODS
    */
   
