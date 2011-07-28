@@ -91,7 +91,7 @@ class User extends AppModel {
       
       if( isset( $this->data[$this->alias]['password'] ) && $this->data[$this->alias]['password'] === $empty_password ) {
         if( !empty( $this->id ) ) {
-          # When editing, just remove the data so no change is made.
+          # When editing, just remove the data so no change is attempted.
           unset( $this->data[$this->alias]['password'] );
           unset( $this->data[$this->alias]['confirm_password'] );
         }
@@ -107,20 +107,36 @@ class User extends AppModel {
   }
   
   /**
+   * CakePHP's beforeFind callback.
+   *
+   * @param   $query
+   * @return  array
+   * @access  public
+   */
+  public function beforeFind( $query ) {
+    # Don't return the password field unless it's specified.
+    $query['fields'] = empty( $query['fields'] )
+      ? array_diff( array_keys( $this->schema() ), array( 'password' ) )
+      : $query['fields'];
+  
+    return $query;
+  }
+  
+  /**
    * PUBLIC METHODS
    */
    
   /**
    * Constructor.
-   *
-   * Define virtual fields here so we can respect any aliases.
-   * 
-   * @see http://book.cakephp.org/view/1632/Virtual-fields-and-model-aliases
    */
   public function __construct( $id = false, $table = null, $ds = null ) {
     parent::__construct( $id, $table, $ds );
     
+    # Define virtual fields here so that aliases are respected.
+    # @see http://book.cakephp.org/view/1632/Virtual-fields-and-model-aliases
     $this->virtualFields['full_name'] = sprintf( 'CONCAT(%s.first_name, " ", %s.last_name)', $this->alias, $this->alias );
+    
+    # The listed fields cannot be modified in a batch update.
     $this->whitelist = array_diff( array_keys( $this->schema() ), array( 'id', 'last_login', 'active', 'created', 'modified' ) );
   }
   
