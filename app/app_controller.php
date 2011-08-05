@@ -23,7 +23,7 @@ class AppController extends Controller {
    * Override this method to ensure that some components get loaded
    * conditionally.
    *
-   * @access	public
+   * @access  public
    */
   public function constructClasses() {
     if( Configure::read( 'debug' ) > 0 ) {
@@ -40,8 +40,8 @@ class AppController extends Controller {
   /**
    * CakePHP's beforeFilter callback.
    *
-   * @return	void
-   * @access	public
+   * @return  void
+   * @access  public
    */
   public function beforeFilter() {
     $this->Auth->loginError = __( 'Invalid authentication credentials. Please try again.', true );
@@ -69,8 +69,8 @@ class AppController extends Controller {
    * Has the final call over whether a user gets authenticated. Called
    * by the Auth component.
    *
-   * @return	boolean
-   * @access	public
+   * @return  boolean
+   * @access  public
    */
   public function isAuthorized() {
     return true;
@@ -89,18 +89,7 @@ class AppController extends Controller {
    * @access  protected
    */
   protected function current_user( $property = null ) {
-    $user = $this->Auth->user();
-    
-    if( !empty( $user ) ) {
-      if( empty( $property ) ) {
-        $user = $user[$this->Auth->userModel]; # Return the complete user array
-      }
-      else {
-        $user = $this->Auth->user( $property ); # Return a specific property
-      }
-    }
-    
-    return $user;
+    return User::get( $property );
   }
   
   /**
