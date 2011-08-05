@@ -51,6 +51,14 @@ class AppController extends Controller {
     if( !empty( $user ) ) {
       Configure::write( 'User', $user[$this->Auth->getModel()->alias] );
     }
+    
+    /**
+     * Turn off debug output for ajax requests its output will hose the
+     * structured response format.
+     */
+    if( $this->RequestHandler->isAjax() ) {
+      Configure::write( 'debug', 0 );
+    }
   }
   
   /**
