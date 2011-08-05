@@ -6,7 +6,7 @@ class AppController extends Controller {
     'Auth' => array(
       'authorize'    => 'controller',
       'fields'       => array( 'username' => 'email', 'password' => 'password' ), 
-      'userScope'    => array( 'active' => 1 ),
+      'userScope'    => array( 'User.active' => 1 ),
       # 'loginRedirect' => array(), # Sends to the homepage (/) by default
       'autoRedirect' => false,
       # 'logoutRedirect' => array(), # Redirects to the login page by default
