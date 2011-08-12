@@ -41,6 +41,39 @@ class AppModel extends Model {
   }
   
   /**
+   * CALLBACKS
+   */
+  
+  /**
+   * CakePHP's afterFind callback.
+   *
+   * @param 	$results
+   * @param   $primary
+   * @return	mixed
+   * @access	public
+   */
+  public function afterFind( $results, $primary = false ) {
+    # Massage aggregated result values so they're less awkward
+    if( !empty( $results ) ) {
+      foreach( $results as $i => $result ) {
+        if( !empty( $result[0] ) ) { # Aggregate values are stored in a standalone, indexed array
+          foreach( $result[0] as $field => $value ) { # aggregated field alias => aggregate value
+            if( !empty( $result[$this->alias][$field] ) ) {
+              $field = 'aggregated_' . $field;
+            }
+            
+            $results[$i][$this->alias][$field] = $value;
+          }
+          
+          unset( $results[$i][0] ); # Unset the awkward array element
+        }
+      }
+    }
+    
+    return parent::afterFind( $results, $primary );
+  }
+  
+  /**
    * VALIDATORS
    */
   
