@@ -56,7 +56,12 @@ class AppModel extends Model {
     # Massage aggregated result values so they're less awkward
     if( !empty( $results ) ) {
       foreach( $results as $i => $result ) {
-        if( !empty( $result[0] ) ) { # Aggregate values are stored in a standalone, indexed array
+        # Sometimes a find call just returns a string which can be
+        # accessed as an array. Ignore such results. In an array of
+        # results, aggregated values will be stored in a "0" index.
+        # This is what we want to extract and restore as a property
+        # of the parent object.
+        if( !is_string( $result ) && !empty( $result[0] ) ) {
           foreach( $result[0] as $field => $value ) { # aggregated field alias => aggregate value
             if( !empty( $result[$this->alias][$field] ) ) {
               $field = 'aggregated_' . $field;
