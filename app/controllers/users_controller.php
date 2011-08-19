@@ -63,6 +63,38 @@ class UsersController extends AppController {
   }
   
   /**
+   * Allow the current user to impersonate another user.
+   *
+   * @param 	$user_id
+   * @access	public
+   */
+  public function impersonate( $user_id = null ) {
+    # TODO: Display a UI, accept a user and set impersonation.
+    
+    if( !empty( $user_id ) ) {
+      $user = $this->User->active(
+        'all',
+        array(
+          'conditions' => array( 'User.id' => $user_id ),
+        )
+      );
+      
+      if( !empty( $user ) ) { # We've found someone we can impersonate
+        # Save off the current auth user to make room for the impersonated user
+        $this->Session->write( 'Auth.Impersonator', $this->Auth->user() );
+        # Change the recognized auth user to the impersonated user
+        $this->Auth->login( $user );
+      }
+      
+      # For a non-ajax call, redirect back to the referrer so that the
+      # impersonation gets set and detected.
+      if( !$this->RequestHandler->isAjax() ) {
+        $this->redirect( $this->referer( '/' ) );
+      }
+    }
+  }
+  
+  /**
    * Logs a user out of the system
    *
    * @access	public

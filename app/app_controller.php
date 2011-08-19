@@ -47,9 +47,17 @@ class AppController extends Controller {
     $this->Auth->loginError = __( 'Invalid authentication credentials. Please try again.', true );
     $this->Auth->authError  = __( 'Authentication required. Please login.', true );
     
+    /**
+     * Provide convenient access to the authenticated user and, if
+     * applicable, the user impersonating the auth user.
+     */
     $user = $this->Auth->user();
     if( !empty( $user ) ) {
       Configure::write( 'User', $user[$this->Auth->getModel()->alias] );
+    }
+    $impersonator = $this->Session->read( 'Auth.Impersonator' );
+    if( !empty( $impersonator ) ) {
+      Configure::write( 'Impersonator', $impersonator[$this->Auth->getModel()->alias] );
     }
     
     /**

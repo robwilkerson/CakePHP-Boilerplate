@@ -63,6 +63,11 @@ class User extends AppModel {
     'AuditLog.Auditable' => array(
       'ignore' => array( 'last_login' ),
     ),
+    'NamedScope.NamedScope' => array(
+      'active' => array(
+        'conditions' => array( 'User.active' => 1 ),
+      ),
+    ),
   );
   
   /**
@@ -114,7 +119,7 @@ class User extends AppModel {
    * @access  public
    */
   public function beforeFind( $query ) {
-    # Don't return the password field unless it's specified.
+    # Don't return the password field unless it's explicitly specified.
     $query['fields'] = empty( $query['fields'] )
       ? array_diff( array_keys( $this->schema() ), array( 'password' ) )
       : $query['fields'];
@@ -155,5 +160,27 @@ class User extends AppModel {
     }
     
     return empty( $property ) ? $user : $user[$property];
+  }
+  
+  /**
+   * Retrieves a list of users who can be impersonated by the current
+   * user. By default, a list of all active users, but this is the
+   * place to include any filter logic.
+   *
+   * @return	array
+   * @access	public
+   */
+  public function impersonatable() {
+    return $this->active( 'list' ); # see NamedScope config for active()
+  }
+  
+  /**
+   * Returns the user who is impersonating another, if any.
+   *
+   * @return	array
+   * @access	public
+   */
+  public function impersonating() {
+    return Configure::read( 'Impersonator' );
   }
 }
