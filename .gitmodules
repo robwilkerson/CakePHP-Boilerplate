@@ -7,3 +7,6 @@
 [submodule "app/plugins/polyclip"]
 	path = app/plugins/polyclip
 	url = git@github.com:robwilkerson/CakePHP-Polyclip-Plugin.git
+[submodule "app/plugins/named_scope"]
+	path = app/plugins/named_scope
+	url = git://github.com/joelmoss/cakephp-namedscope.git
