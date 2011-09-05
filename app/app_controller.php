@@ -58,6 +58,13 @@ class AppController extends Controller {
     $impersonator = $this->Session->read( 'Auth.Impersonator' );
     if( !empty( $impersonator ) ) {
       Configure::write( 'Impersonator', $impersonator[$this->Auth->getModel()->alias] );
+      
+      # Set a reminder flash message if we're not halting impersonation.
+      # If set for users/unimpersonate, it will display when the user is
+      # redirected after halting the impersonation.
+      if( !( $this->name === 'Users' && $this->action === 'unimpersonate' ) ) {
+        $this->Session->setFlash( 'You are currently impersonating ' . $this->Auth->user( 'first_name' ) . ' ' . $this->Auth->user( 'last_name' ) . ' (' . $this->Auth->user( 'email' ) . ')' );
+      }
     }
     
     /**

@@ -63,25 +63,35 @@ class UsersController extends AppController {
   }
   
   /**
+   * Retrieves a list of impersonatable users.
+   *
+   * @access    public
+   */
+  public function impersonatable() {
+    $this->layout = 'default';
+    $this->set( 'users', $this->User->impersonatable() );
+  }
+  
+  /**
    * Allow the current user to impersonate another user.
    *
    * @param 	$user_id
    * @access	public
    */
   public function impersonate( $user_id = null ) {
-    # TODO: Display a UI, accept a user and set impersonation.
-    
     if( !empty( $user_id ) ) {
       $user = $this->User->active(
         'all',
         array(
+          'contain'    => false,
           'conditions' => array( 'User.id' => $user_id ),
         )
       );
       
       if( !empty( $user ) ) { # We've found someone we can impersonate
         # Save off the current auth user to make room for the impersonated user
-        $this->Session->write( 'Auth.Impersonator', $this->Auth->user() );
+        $impersonator = $this->Auth->user();
+        $this->Session->write( 'Auth.Impersonator', $impersonator[$this->Auth->getModel()->alias] );
         # Change the recognized auth user to the impersonated user
         $this->Auth->login( $user );
       }
@@ -91,6 +101,40 @@ class UsersController extends AppController {
       if( !$this->RequestHandler->isAjax() ) {
         $this->redirect( $this->referer( '/' ) );
       }
+    }
+  }
+  
+  /**
+   * Stop impersonating another user and re-assume the user's true
+   * identity/credentials.
+   *
+   * @access	public
+   */
+  public function unimpersonate() {
+    if( $this->Session->check( 'Auth.Impersonator' ) ) {
+      # The value stored to the session has the password removed. This
+      # forces us to execute a new find to re-authenticate successfully.
+      $impersonator = $this->User->find(
+        'first',
+        array(
+          'recursive'  => -1,
+          'conditions' => array( 'User.id' => $this->Session->read( 'Auth.Impersonator.id' ) ),
+        )
+      );
+      # Log the impersonator back in as him/herself and delete the
+      # Impersonator reference.
+      $this->Auth->login( $this->Session->read( 'Auth.Impersonator' ) );
+      $this->Session->delete( 'Auth.Impersonator' );
+      
+      # For a non-ajax call, redirect back to the referrer so that the
+      # impersonation gets set and detected.
+      if( !$this->RequestHandler->isAjax() ) {
+        $this->redirect( $this->referer( '/' ) );
+      }
+    }
+    else {
+      # Something is going on that shouldn't be, so let's just reset.
+      $this->Auth->logout();
     }
   }
   

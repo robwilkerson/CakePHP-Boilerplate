@@ -170,8 +170,22 @@ class User extends AppModel {
    * @return	array
    * @access	public
    */
-  public function impersonatable() {
-    return $this->active( 'list' ); # see NamedScope config for active()
+  public function impersonatable( $user_id = null ) {
+    $user_id = empty( $user_id ) ? User::get( 'id' ) : $user_id;
+    
+    return $this->active(
+      'list',
+      array(
+        'contain'    => false,
+        'conditions' => array(
+          'User.id <> ' => $user_id,
+        ),
+        'order'      => array(
+          'User.last_name',
+          'User.first_name',
+        )
+      )
+    ); # see NamedScope config for active()
   }
   
   /**
@@ -181,6 +195,11 @@ class User extends AppModel {
    * @access	public
    */
   public function impersonating() {
-    return Configure::read( 'Impersonator' );
+    $user = User::get( 'id' );
+    $impersonator = Configure::read( 'Impersonator.id' );
+    
+    return !empty( $user ) && !empty( $impersonator ) && $user !== $impersonator
+      ? $impersonator
+      : false;
   }
 }
