@@ -7,12 +7,12 @@
  * PHP versions 5
  *
  * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright 2005-2010, Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * Copyright 2005-2011, Cake Software Foundation, Inc. (http://cakefoundation.org)
  *
  * Licensed under The MIT License
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright 2005-2010, Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * @copyright     Copyright 2005-2011, Cake Software Foundation, Inc. (http://cakefoundation.org)
  * @link          http://cakephp.org CakePHP(tm) Project
  * @package       cake
  * @subpackage    cake.cake.libs.model
@@ -2055,6 +2055,9 @@ class Model extends Overloadable {
  *  - If a single field is specified, 'id' is used for key and specified field is used for value.
  *  - If three fields are specified, they are used (in order) for key, value and group.
  *  - Otherwise, first and second fields are used for key and value.
+ *
+ *  Note: find(list) + database views have issues with MySQL 5.0. Try upgrading to MySQL 5.1 if you 
+ *  have issues with database views.
  *
  * @param array $conditions SQL conditions array, or type of find operation (all / first / count /
  *    neighbors / list / threaded)

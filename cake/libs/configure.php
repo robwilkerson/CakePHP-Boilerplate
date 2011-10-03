@@ -5,12 +5,12 @@
  * PHP versions 4 and 5
  *
  * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright 2005-2010, Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * Copyright 2005-2011, Cake Software Foundation, Inc. (http://cakefoundation.org)
  *
  * Licensed under The MIT License
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright 2005-2010, Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * @copyright     Copyright 2005-2011, Cake Software Foundation, Inc. (http://cakefoundation.org)
  * @link          http://cakephp.org CakePHP(tm) Project
  * @package       cake
  * @subpackage    cake.cake.libs
@@ -118,6 +118,7 @@ class Configure extends Object {
 				if (function_exists('ini_set')) {
 					ini_set('display_errors', 1);
 				}
+				$callback = array('Debugger', 'getInstance');
 			} elseif (function_exists('ini_set')) {
 				ini_set('display_errors', 0);
 			}
@@ -132,6 +133,12 @@ class Configure extends Object {
 				if (!class_exists('CakeLog')) {
 					require LIBS . 'cake_log.php';
 				}
+				if (empty($callback)) {
+					$callback = array('CakeLog', 'getInstance');
+				}
+			}
+			if (!empty($callback) && class_exists('Debugger')) {
+				Debugger::invoke(call_user_func($callback));
 			}
 			error_reporting($reporting);
 		}

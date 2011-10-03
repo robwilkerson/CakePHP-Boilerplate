@@ -5,12 +5,12 @@
  * PHP versions 4 and 5
  *
  * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright 2005-2010, Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * Copyright 2005-2011, Cake Software Foundation, Inc. (http://cakefoundation.org)
  *
  * Licensed under The MIT License
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright 2005-2010, Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * @copyright     Copyright 2005-2011, Cake Software Foundation, Inc. (http://cakefoundation.org)
  * @link          http://cakephp.org CakePHP(tm) Project
  * @package       cake
  * @subpackage    cake.cake.libs.model.datasources
@@ -2239,8 +2239,8 @@ class DboSource extends DataSource {
  * @access private
  */
 	function __parseKey(&$model, $key, $value) {
-		$operatorMatch = '/^((' . implode(')|(', $this->__sqlOps);
-		$operatorMatch .= '\\x20)|<[>=]?(?![^>]+>)\\x20?|[>=!]{1,3}(?!<)\\x20?)/is';
+		$operatorMatch = '/^(((' . implode(')|(', $this->__sqlOps);
+		$operatorMatch .= ')\\x20?)|<[>=]?(?![^>]+>)\\x20?|[>=!]{1,3}(?!<)\\x20?)/is';
 		$bound = (strpos($key, '?') !== false || (is_array($value) && strpos($key, ':') !== false));
 
 		if (!strpos($key, ' ')) {

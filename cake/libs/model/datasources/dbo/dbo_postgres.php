@@ -5,12 +5,12 @@
  * PHP versions 4 and 5
  *
  * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright 2005-2010, Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * Copyright 2005-2011, Cake Software Foundation, Inc. (http://cakefoundation.org)
  *
  * Licensed under The MIT License
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright 2005-2010, Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * @copyright     Copyright 2005-2011, Cake Software Foundation, Inc. (http://cakefoundation.org)
  * @link          http://cakephp.org CakePHP(tm) Project
  * @package       cake
  * @subpackage    cake.cake.libs.model.datasources.dbo
@@ -403,7 +403,7 @@ class DboPostgres extends DboSource {
  * @access public
  */
 	function truncate($table, $reset = 0) {
-		if (parent::truncate($table)) {
+		if ($this->execute('DELETE FROM ' . $this->fullTableName($table))) {
 			$table = $this->fullTableName($table, false);
 			if (isset($this->_sequenceMap[$table]) && $reset !== 1) {
 				foreach ($this->_sequenceMap[$table] as $field => $sequence) {
@@ -580,11 +580,7 @@ class DboPostgres extends DboSource {
 						case 'add':
 							foreach ($column as $field => $col) {
 								$col['name'] = $field;
-								$alter = 'ADD COLUMN '.$this->buildColumn($col);
-								if (isset($col['after'])) {
-									$alter .= ' AFTER '. $this->name($col['after']);
-								}
-								$colList[] = $alter;
+								$colList[] = 'ADD COLUMN '.$this->buildColumn($col);
 							}
 						break;
 						case 'drop':
@@ -603,8 +599,7 @@ class DboPostgres extends DboSource {
 								$default = isset($col['default']) ? $col['default'] : null;
 								$nullable = isset($col['null']) ? $col['null'] : null;
 								unset($col['default'], $col['null']);
-								$colList[] = 'ALTER COLUMN '. $fieldName .' TYPE ' . str_replace($fieldName, '', $this->buildColumn($col));
-
+								$colList[] = 'ALTER COLUMN '. $fieldName .' TYPE ' . str_replace(array($fieldName, 'NOT NULL'), '', $this->buildColumn($col));
 								if (isset($nullable)) {
 									$nullable = ($nullable) ? 'DROP NOT NULL' : 'SET NOT NULL';
 									$colList[] = 'ALTER COLUMN '. $fieldName .'  ' . $nullable;

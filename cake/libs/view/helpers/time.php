@@ -5,12 +5,12 @@
  * PHP versions 4 and 5
  *
  * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
- * Copyright 2005-2010, Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * Copyright 2005-2011, Cake Software Foundation, Inc. (http://cakefoundation.org)
  *
  * Licensed under The MIT License
  * Redistributions of files must retain the above copyright notice.
  *
- * @copyright     Copyright 2005-2010, Cake Software Foundation, Inc. (http://cakefoundation.org)
+ * @copyright     Copyright 2005-2011, Cake Software Foundation, Inc. (http://cakefoundation.org)
  * @link          http://cakephp.org CakePHP(tm) Project
  * @package       cake
  * @subpackage    cake.cake.libs.view.helpers
@@ -440,6 +440,17 @@ class TimeHelper extends AppHelper {
  */
 	function toRSS($dateString, $userOffset = null) {
 		$date = $this->fromString($dateString, $userOffset);
+
+		if(!is_null($userOffset)) {
+			if($userOffset == 0) {
+				$timezone = '+0000';
+			} else {
+				$hours = (int) floor(abs($userOffset));
+				$minutes = (int) (fmod(abs($userOffset), $hours) * 60);
+				$timezone = ($userOffset < 0 ? '-' : '+') . str_pad($hours, 2, '0', STR_PAD_LEFT) . str_pad($minutes, 2, '0', STR_PAD_LEFT);
+			}
+			return date('D, d M Y H:i:s', $date) . ' ' . $timezone;
+		}
 		return date("r", $date);
 	}
 
