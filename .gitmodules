@@ -10,3 +10,6 @@
 [submodule "app/plugins/named_scope"]
 	path = app/plugins/named_scope
 	url = git://github.com/joelmoss/cakephp-namedscope.git
+[submodule "app/plugins/nullable"]
+	path = app/plugins/nullable
+	url = git@github.com:robwilkerson/CakePHP-NullableBehavior.git
