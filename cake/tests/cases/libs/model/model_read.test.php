@@ -5158,7 +5158,7 @@ class ModelReadTest extends BaseModelTest {
 				'group' => null,
 				'joins' => array(array(
 					'alias' => 'ArticlesTag',
-					'table' => $this->db->fullTableName('articles_tags'),
+					'table' => 'articles_tags',
 					'conditions' => array(
 						array("ArticlesTag.article_id" => '{$__cakeID__$}'),
 						array("ArticlesTag.tag_id" => $this->db->identifier('Tag.id'))
@@ -7435,6 +7435,7 @@ class ModelReadTest extends BaseModelTest {
 
 		$this->assertTrue($Post->isVirtualField('other_field'));
 		$this->assertTrue($Post->isVirtualField('Post.other_field'));
+		$this->assertFalse($Post->isVirtualField('Comment.other_field'), 'Other models should not match.');
 		$this->assertFalse($Post->isVirtualField('id'));
 		$this->assertFalse($Post->isVirtualField('Post.id'));
 		$this->assertFalse($Post->isVirtualField(array()));
