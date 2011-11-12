@@ -2,11 +2,26 @@
 
 class AppModel extends Model {
   public $actsAs = array( 'Nullable', 'Containable' );
-  
+
   /**
    * OVERRIDES
    */
-  
+
+  /**
+   * Constructor.
+   *
+   * Handy way of creating a whitelist that will be reasonably suitable for most.
+   */
+  public function __construct( $id = false, $table = null, $ds = null ) {
+    parent::__construct( $id, $table, $ds );
+
+    # Generate a whitelist that doesn't require me to make an update every time
+    # I add a property...unless I don't want that property to be batch updated.
+    if( empty( $this->whitelist ) ) {
+      $this->whitelist = array_diff( array_keys( $this->schema() ), array( 'id', 'created', 'modified' ) );
+    }
+  }
+
   /**
    * Override Model::deconstruct() in order to use an integrated date
    * value, but multipart time value. The parent method expects both
@@ -24,11 +39,11 @@ class AppModel extends Model {
    */
   public function deconstruct( $field, $data ) {
     $type = $this->getColumnType( $field );
-    
+
     if( in_array( $type, array( 'datetime', 'timestamp' ) ) ) {
       if( isset( $data['date'] ) && !empty( $data['date'] ) ) {
         $date = date( 'U', strtotime( $data['date'] ) );
-        
+
         if( $date ) {
           $data['month'] = date( 'm', $date );
           $data['day']   = date( 'd', $date );
@@ -36,14 +51,14 @@ class AppModel extends Model {
         }
       }
     }
-    
+
     return parent::deconstruct( $field, $data );
   }
-  
+
   /**
    * CALLBACKS
    */
-  
+
   /**
    * CakePHP's afterFind callback.
    *
@@ -66,22 +81,22 @@ class AppModel extends Model {
             if( !empty( $result[$this->alias][$field] ) ) {
               $field = 'aggregated_' . $field;
             }
-            
+
             $results[$i][$this->alias][$field] = $value;
           }
-          
+
           unset( $results[$i][0] ); # Unset the awkward array element
         }
       }
     }
-    
+
     return parent::afterFind( $results, $primary );
   }
-  
+
   /**
    * VALIDATORS
    */
-  
+
   /**
    * Validates a datetime value by acting as a decorator for native
    * Validation::date() and Validation::time() methods.
@@ -94,14 +109,14 @@ class AppModel extends Model {
   public function datetime( $check, $options ) {
     $check    = array_shift( array_values( $check ) );
     $datetime = strtotime( $check );
-    
+
     if( $datetime !== false ) {
       return Validation::date( date( 'Y-m-d', $datetime ), 'ymd' ) && Validation::time( date( 'H:i', $datetime ) );
     }
-    
+
     return false;
   }
-  
+
   /**
    * Custom validation method specific to integers.
    *
@@ -110,10 +125,10 @@ class AppModel extends Model {
    */
   public function integer( $check = array() ) {
     $value = array_shift( array_values( $check ) );
-    
+
     return preg_match( '/^\d+$/', $value );
   }
-  
+
   /**
    * Custom validation method to ensure that two field values are the
    * same before validating the model. Useful (and ubiquitous) for
@@ -127,14 +142,14 @@ class AppModel extends Model {
   public function identical( $check = array(), $confirm_field = null ) {
     $value   = array_shift( array_values( $check ) );
     $compare = $this->data[$this->alias][$confirm_field];
-    
+
     return $value === $compare;
   }
-  
+
   /**
    * PUBLIC METHODS
    */
-  
+
   /**
    * Returns the current user object/array. Useful in the context of
    * the Auditable behavior.
@@ -148,7 +163,7 @@ class AppModel extends Model {
   public function current_user( $property = null ) {
     return User::get( $property );
   }
-  
+
   /**
    * Returns the generated SQL executed during the request.
    * Useful when debugging.
