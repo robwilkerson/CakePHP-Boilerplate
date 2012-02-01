@@ -1,7 +1,7 @@
 <?php
 
 class AppModel extends Model {
-  public $actsAs = array( 'Nullable', 'Containable' );
+  public $actsAs = array( 'Nullable.Nullable', 'Containable' );
 
   /**
    * OVERRIDES

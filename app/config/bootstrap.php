@@ -48,3 +48,70 @@
  * Inflector::rules('plural', array('rules' => array(), 'irregular' => array(), 'uninflected' => array()));
  *
  */
+
+# Any API keys or similar data
+# e.g. define( 'APIKEY_IPINFODB', 'f3f849970d5353c1de35ec39d8c2e6b2c355360193f84b0bb693b78d9cbc4b7c' ); # http://ipinfodb.com
+
+# Environment info
+Configure::write( 'env.name', 'Production' );
+Configure::write( 'env.code', 'PRD' );
+Configure::write( 'env.domain', 'www.savebigbread.com' );
+Configure::write( 'env.full_base_url', 'http://www.savebigbread.com' );
+
+# Feature toggle switches
+# Configure::write( 'feature.contractor_registration.enabled', true );
+
+# Date/time formatting constants 
+define( 'DATE_FORMAT_SHORT', 'm/d/Y' );
+define( 'DATE_FORMAT_LONG_WITH_DAY', 'l, F j, Y' );
+define( 'DATE_FORMAT_LONG', 'F j, Y' );
+define( 'DATE_FORMAT_MYSQL', 'Y-m-d' );
+
+define( 'TIME_FORMAT', 'g:i a' );
+define( 'TIME_FORMAT_MYSQL', 'H:i:s' );
+
+define( 'DATETIME_FORMAT_SHORT', DATE_FORMAT_SHORT . ' ' . TIME_FORMAT );
+define( 'DATETIME_FORMAT_LONG', DATE_FORMAT_LONG . ' ' . TIME_FORMAT );
+define( 'DATETIME_FORMAT_MYSQL', DATE_FORMAT_MYSQL . ' ' . TIME_FORMAT_MYSQL );
+
+# Cache configuration
+Cache::config(
+  'brief',
+  array(
+    'engine' => 'File',
+    'duration'=> '+15 minutes',
+    'probability'=> 100,
+    'path' => CACHE . 'brief' . DS,
+  )
+);
+Cache::config(
+  'hour',
+  array(
+    'engine' => 'File',
+    'duration'=> '+1 hour',
+    'probability'=> 100,
+    'path' => CACHE . 'hour' . DS,
+  )
+);
+Cache::config(
+  'day',
+  array(
+    'engine' => 'File',
+    'duration'=> '+1 day',
+    'probability'=> 100,
+    'path' => CACHE . 'day' . DS,
+  )
+);
+Cache::config(
+  'week',
+  array(
+    'engine' => 'File',
+    'duration'=> '+1 week',
+    'probability'=> 100,
+    'path' => CACHE . 'week' . DS,
+  )
+);
+
+if( file_exists( dirname( __FILE__ ) . DS . 'bootstrap.local.php' ) ) {
+  include_once( 'bootstrap.local.php' );
+}
