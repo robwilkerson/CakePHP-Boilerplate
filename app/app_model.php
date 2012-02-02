@@ -17,7 +17,9 @@ class AppModel extends Model {
 
     # Generate a whitelist that doesn't require me to make an update every time
     # I add a property...unless I don't want that property to be batch updated.
-    if( empty( $this->whitelist ) ) {
+    # Don't make any assumptions if the model has a non-standard primary key.
+    # In that case, the key will have to be part of the save data.
+    if( empty( $this->whitelist ) && $this->has_standard_primary_key() ) {
       $this->whitelist = array_diff( array_keys( $this->schema() ), array( 'id', 'created', 'modified' ) );
     }
   }
@@ -173,5 +175,24 @@ class AppModel extends Model {
    */
   public function sql() {
     return $this->getDataSource()->getLog( false, false );
+  }
+
+  /** 
+   * PRIVATE METHODS
+   */
+  
+  /**
+   * Determines whether the model has a "conventional" primary key. Meaning
+   * that the key is either an integer or a UUID.
+   *
+   * @return  boolean
+   * @access  public
+   */
+  public function has_standard_primary_key() {
+    $is_uuid = $this->_schema[$this->primaryKey]['length'] === 36 && (
+      $this->_schema[$this->primaryKey]['type'] === 'string' || $this->_schema[$this->primaryKey]['type'] === 'binary'
+    );
+
+    return $this->_schema[$this->primaryKey]['type'] === 'integer' || $is_uuid;
   }
 }
