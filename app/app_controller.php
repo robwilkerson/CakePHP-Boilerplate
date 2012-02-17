@@ -32,6 +32,20 @@ class AppController extends Controller {
     
     parent::constructClasses();
   }
+
+  /**
+   * CakePHP's beforeRender callback.
+   *
+   * @return  void
+   * @access  public
+   */
+  public function beforeRender() {
+    parent::beforeRender();
+
+    # Set a default page title so that the controller name isn't used
+    # @see cake/libs/view/view.php line 480
+    $this->set( 'title_for_layout', '' );
+  }
   
   /**
    * CALLBACKS
